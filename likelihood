@@ -14,23 +14,23 @@ A=readdlm("/Users/zhiyangfeng/Desktop/labor.txt", Float64)
 
 N=1506
 T=20
-K=43  #the max initial experience is 24, so the max exp at t=19 is 24+19
+K=44  #the max initial experience is 24, so the max exp at t=20 is 24+20
 
-b_in=884.113073931369  #fixed cost of working
+b_in=15493.73040633815  #fixed cost of working
 #parameters in Mincer earnings function
-β1_in=7.681691788676436
-β2_in=0.024057667127494436
-β3_in= -0.00032832444975649036
-β4_in=0.15639172930825312
-σ_in=0.7837232381553263 #standard deviation of ε
-σe_in=0.2894678911521219  #standard deviation of measurement error
+β1_in=9.350534160468246
+β2_in=0.018628092856856588
+β3_in=-0.00033146797764284445
+β4_in=0.041052978799600896
+σ_in=0.6013350258587833 #standard deviation of ε
+σe_in=0.18661434437301577  #standard deviation of measurement error
 σu_in=sqrt(σ_in^2+σe_in^2)
 
 #parameters in the utility function
-α1_in=-7775.52294477575
-α2_in=-0.13230007046936518
-α3_in=-163.6450706663075
-α4_in=-389.8076734137288
+α1_in=-12981.635893926774
+α2_in=-0.015829101321218772
+α3_in= 75.79111278268003
+α4_in=316.5851697876777
 
 
 δ=0.95  #discount rate
@@ -51,9 +51,11 @@ for i=1:N
   ini_exp[i]=A[(i-1)*20+1,4]  #record each individiual's initial experience
   for t=T:-1:1
     if t==T
-      for j=round(Int,ini_exp[i]+1):round(Int,ini_exp[i]+t-1)
+      for j=round(Int,ini_exp[i]+1):round(Int,ini_exp[i]+t)
         if -x[3]*k[j]-x[1]-x[2]*A[(i-1)*20+t,8]+(1+x[2])*x[5]-x[4]*A[(i-1)*20+t,6]<=0
           cut_offs[i,t,j]=-100
+        elseif 1+x[2]<=0
+          cut_offs[i,t,j]=100
         else
         cut_offs[i,t,j]=log(-x[3]*k[j]-x[1]-x[2]*A[(i-1)*20+t,8]+(1+x[2])*x[5]-x[4]*A[(i-1)*20+t,6])-log(1+x[2])-(x[6]+x[7]*k[j]+x[8]*k[j]*k[j]+x[9]*A[(i-1)*20+t,6])
         end
@@ -62,9 +64,11 @@ for i=1:N
 
       end
     else
-      for j=round(Int,ini_exp[i]+1):round(Int,ini_exp[i]+t-1)
+      for j=round(Int,ini_exp[i]+1):round(Int,ini_exp[i]+t)
         if -x[3]*k[j]-x[1]-x[2]*A[(i-1)*20+t,8]+(1+x[2])*x[5]-x[4]*A[(i-1)*20+t,6]+δ*(Emax[i,t+1,j]-Emax[i,t+1,j+1])<=0
           cut_offs[i,t,j]=-100
+        elseif 1+x[2]<=0
+          cut_offs[i,t,j]=100
         else
         cut_offs[i,t,j]=log(-x[3]*k[j]-x[1]-x[2]*A[(i-1)*20+t,8]+(1+x[2])*x[5]-x[4]*A[(i-1)*20+t,6]+δ*(Emax[i,t+1,j]-Emax[i,t+1,j+1]))-log(1+x[2])-(x[6]+x[7]*k[j]+x[8]*k[j]*k[j]+x[9]*A[(i-1)*20+t,6])
         end
@@ -91,12 +95,12 @@ function llk(x)
   u=zeros(N,10) #u is the sum of wage shock and measurement error
   llk=0
   for i=1:N
-    for t=2:10
+    for t=1:10
       if A[(i-1)*20+t,3]==0
-        pr[i,t]=cdf(dist,cut_offs[i,t,round(Int,A[(i-1)*20+t-1,4])+1]/x[10])
+        pr[i,t]=cdf(dist,cut_offs[i,t,round(Int,A[(i-1)*20+t,4])+1]/x[10])
       else
-        u[i,t]=log(A[(i-1)*20+t,5])-(x[6]+x[7]*A[(i-1)*20+t-1,4]+x[8]*A[(i-1)*20+t-1,4]^2+x[9]*A[(i-1)*20+t,6])
-        pr[i,t]=(1-cdf(dist, (cut_offs[i,t,round(Int,A[(i-1)*20+t-1,4])+1]-ρ^2*u[i,t])/(x[10]*sqrt(1-ρ^2))))*pdf(dist, (u[i,t]/σ_u))/σ_u
+        u[i,t]=log(A[(i-1)*20+t,5])-(x[6]+x[7]*A[(i-1)*20+t,4]+x[8]*A[(i-1)*20+t,4]^2+x[9]*A[(i-1)*20+t,6])
+        pr[i,t]=(1-cdf(dist, (cut_offs[i,t,round(Int,A[(i-1)*20+t,4])+1]-ρ^2*u[i,t])/(x[10]*sqrt(1-ρ^2))))*pdf(dist, (u[i,t]/σ_u))/σ_u
         #pr[i,t]=(1-cdf(dist, (cut_offs[i,t,round(Int,A[(i-1)*20+t,4])+1]-(σ^2+σe^2)*u[i,t])/(σ*σe/sqrt(σ^2+σe^2))))/(sqrt(σ^2+σe^2))*pdf(dist_u,u[i,t])
       end
     end
@@ -110,4 +114,4 @@ x0=[α1_in,α2_in,α3_in,α4_in,b_in,β1_in,β2_in,β3_in,β4_in,σ_in,σe_in]
 
 f(x)=llk(x)
 x0=[α1_in,α2_in,α3_in,α4_in,b_in,β1_in,β2_in,β3_in,β4_in,σ_in,σe_in]
-result=optimize(f,x0,Optim.NelderMead(), Optim.Options(iterations=1000,g_tol=1))
+result=optimize(f,x0,Optim.NelderMead(), Optim.Options(iterations=1000,g_tol=1e-3))
